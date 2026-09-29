@@ -12,6 +12,8 @@
 #include "Animation/AnimInstance.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
+#include "PerlinProcTerrain.h"
+#include "CollisionQueryParams.h"
 
 // Sets default values for this component's properties
 UTP_WeaponComponent::UTP_WeaponComponent()
@@ -23,48 +25,85 @@ UTP_WeaponComponent::UTP_WeaponComponent()
 
 void UTP_WeaponComponent::Fire()
 {
-	if (Character == nullptr || Character->GetController() == nullptr)
+	//**Checks to ensure the weapon has a valid character. 
+	if (Character == nullptr)
 	{
 		return;
 	}
 
-	// Try and fire a projectile
-	if (ProjectileClass != nullptr)
+	//**Gets player controller to read camera position and aiming direction
+	APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
+
+	//**Grabs the current game world to perform the raycast and spawn projectile
+	UWorld* World = GetWorld();
+
+	//**Ensures playercontroller and world are available. 
+	if (PlayerController == nullptr || World == nullptr)
 	{
-		UWorld* const World = GetWorld();
-		if (World != nullptr)
+		return;
+	}
+
+	//Get player's camera position and aiming direction.
+	FVector ViewLocation;
+	FRotator ViewRotation;
+	PlayerController->GetPlayerViewPoint(ViewLocation, ViewRotation);
+
+	//**Conduct line trace of 10,000 units in the direction the player is looking. 
+	const FVector TraceEnd = ViewLocation + ViewRotation.Vector() * 10000.0f;
+
+	//**Hit stores the information returned by the raycast and specifies collision-query.
+	FHitResult Hit;
+	FCollisionQueryParams TraceParams;
+
+	//**Ignore the player and actor that owns the weapon
+	TraceParams.AddIgnoredActor(Character);
+	if (GetOwner() != nullptr)
+	{
+		TraceParams.AddIgnoredActor(GetOwner());
+	}
+
+	TraceParams.bTraceComplex = true;
+
+	//**Alter terrain at the first blocking hit, if it is terrain.
+	if (World->LineTraceSingleByChannel(Hit, ViewLocation, TraceEnd, ECC_Visibility, TraceParams))
+	{
+		APerlinProcTerrain* Terrain = Cast<APerlinProcTerrain>(Hit.GetActor());
+
+		if (Terrain != nullptr)
 		{
-			APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
-			const FRotator SpawnRotation = PlayerController->PlayerCameraManager->GetCameraRotation();
-			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-			const FVector SpawnLocation = GetOwner()->GetActorLocation() + SpawnRotation.RotateVector(MuzzleOffset);
-	
-			//Set Spawn Collision Handling Override
-			FActorSpawnParameters ActorSpawnParams;
-			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
-	
-			// Spawn the projectile at the muzzle
-			World->SpawnActor<AANye_HorrorFPSProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+			Terrain->AlterMesh(Hit.ImpactPoint);
 		}
 	}
-	
-	// Try and play the sound if specified
+
+	//Spawn the projectile.
+	if (ProjectileClass != nullptr && GetOwner() != nullptr)
+	{
+		const FVector SpawnLocation = GetOwner()->GetActorLocation() + ViewRotation.RotateVector(MuzzleOffset);
+
+		FActorSpawnParameters ActorSpawnParams;
+		ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+
+		World->SpawnActor<AANye_HorrorFPSProjectile>(ProjectileClass, SpawnLocation, ViewRotation, ActorSpawnParams);
+	}
+
+	//Play firing sound.
 	if (FireSound != nullptr)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, FireSound, Character->GetActorLocation());
 	}
-	
-	// Try and play a firing animation if specified
+
+	//Play firing animation.
 	if (FireAnimation != nullptr)
 	{
-		// Get the animation object for the arms mesh
 		UAnimInstance* AnimInstance = Character->GetMesh1P()->GetAnimInstance();
+
 		if (AnimInstance != nullptr)
 		{
 			AnimInstance->Montage_Play(FireAnimation, 1.f);
 		}
 	}
 }
+
 
 bool UTP_WeaponComponent::AttachWeapon(AANye_HorrorFPSCharacter* TargetCharacter)
 {

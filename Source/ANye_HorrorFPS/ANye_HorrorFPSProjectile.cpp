@@ -9,6 +9,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
+#include "PerlinProcTerrain.h"
 
 AANye_HorrorFPSProjectile::AANye_HorrorFPSProjectile()
 {
@@ -16,7 +17,7 @@ AANye_HorrorFPSProjectile::AANye_HorrorFPSProjectile()
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	CollisionComp->InitSphereRadius(5.0f);
 	CollisionComp->BodyInstance.SetCollisionProfileName("Projectile");
-	CollisionComp->OnComponentHit.AddDynamic(this, &AANye_HorrorFPSProjectile::OnHit);		// set up a notification for when this component hits something blocking
+	CollisionComp->OnComponentHit.AddDynamic(this, &AANye_HorrorFPSProjectile::OnHit);		
 
 	// Players can't walk on it
 	CollisionComp->SetWalkableSlopeOverride(FWalkableSlopeOverride(WalkableSlope_Unwalkable, 0.f));
@@ -91,5 +92,7 @@ void AANye_HorrorFPSProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* Othe
 		MatInstance->SetVectorParameterValue("Color", randColor);
 		//Pass the random frame value to the decal to control the frame number.
 		MatInstance->SetScalarParameterValue("Frame", frameNum);
+
+		
 	}
 }
