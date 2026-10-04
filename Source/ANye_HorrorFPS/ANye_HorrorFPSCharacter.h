@@ -45,6 +45,11 @@ protected:
 
 public:
 		
+	//**Tracks whether the player is in the teleport cooldown to prevent repeated teleporting. 
+	UPROPERTY(EditAnywhere)
+	bool isTeleporting;
+
+
 	/** Look Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* LookAction;
