@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "ProceduralMeshComponent.h"
 #include "PerlinProcTerrain.generated.h"
 
 //**Forward declaration for ProceduralMeshComponent.

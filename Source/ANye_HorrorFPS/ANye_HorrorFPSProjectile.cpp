@@ -9,6 +9,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
+#include "PerlinRockDeform.h"
 #include "PerlinProcTerrain.h"
 
 AANye_HorrorFPSProjectile::AANye_HorrorFPSProjectile()

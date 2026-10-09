@@ -13,6 +13,7 @@
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "PerlinProcTerrain.h"
+#include "PerlinRockDeform.h"
 #include "CollisionQueryParams.h"
 
 // Sets default values for this component's properties
@@ -64,7 +65,7 @@ void UTP_WeaponComponent::Fire()
 
 	TraceParams.bTraceComplex = true;
 
-	//**Alter terrain at the first blocking hit, if it is terrain.
+	//**Alter terrain at the first blocking hit, if it is terrain and Perlin Rock Deform
 	if (World->LineTraceSingleByChannel(Hit, ViewLocation, TraceEnd, ECC_Visibility, TraceParams))
 	{
 		APerlinProcTerrain* Terrain = Cast<APerlinProcTerrain>(Hit.GetActor());
@@ -72,6 +73,11 @@ void UTP_WeaponComponent::Fire()
 		if (Terrain != nullptr)
 		{
 			Terrain->AlterMesh(Hit.ImpactPoint);
+		}
+
+		if (APerlinRockDeform* Rock = Cast<APerlinRockDeform>(Hit.GetActor()))
+		{
+			Rock->HitRock(Hit.ImpactPoint, Hit.ImpactNormal, 25.0f);
 		}
 	}
 
