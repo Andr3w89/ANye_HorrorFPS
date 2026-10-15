@@ -11,6 +11,8 @@
 #include "NiagaraComponent.h"
 #include "PerlinRockDeform.h"
 #include "PerlinProcTerrain.h"
+#include "EnemyCharacter.h"
+#include "GameFramework/DamageType.h"
 
 AANye_HorrorFPSProjectile::AANye_HorrorFPSProjectile()
 {
@@ -59,6 +61,22 @@ void AANye_HorrorFPSProjectile::BeginPlay()
 
 void AANye_HorrorFPSProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
+
+	if (!OtherActor || OtherActor == this || OtherActor == GetOwner() || OtherActor == GetInstigator())
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Player projectile hit: %s"), *GetNameSafe(OtherActor));
+
+	if (AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(OtherActor))
+	{
+		UGameplayStatics::ApplyDamage(Enemy, 20.0f, GetInstigatorController(), this, UDamageType::StaticClass());
+
+		Destroy();
+		return;
+	}
+
 	// Only add impulse and destroy projectile if we hit a physics
 	if ((OtherActor != nullptr) && (OtherActor != this) && (OtherComp != nullptr) && OtherComp->IsSimulatingPhysics())
 	{

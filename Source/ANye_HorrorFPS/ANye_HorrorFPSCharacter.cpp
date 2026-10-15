@@ -10,6 +10,9 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "Engine/LocalPlayer.h"
+#include "HealthWidget.h"
+#include "GameFramework/PlayerController.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -42,10 +45,76 @@ void AANye_HorrorFPSCharacter::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
+
+	CurrentHealth = MaxHealth;
+
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+
+	if (PlayerController && PlayerController->IsLocalController() && HealthWidgetClass)
+	{
+		HealthWidget = CreateWidget<UHealthWidget>(PlayerController, HealthWidgetClass);
+
+		if (HealthWidget)
+		{
+			HealthWidget->AddToViewport();
+			HealthWidget->UpdateHealth(CurrentHealth, MaxHealth);
+		}
+	}
+}
+
+
+float AANye_HorrorFPSCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	if (DamageAmount <= 0.0 || CurrentHealth <= 0.0f)
+	{
+		return 0.0f;
+	}
+
+	const float AcceptedDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	const float PreviousHealth = CurrentHealth;
+	CurrentHealth = FMath::Clamp(CurrentHealth - FMath::Max(AcceptedDamage, 0.0f), 0.0f, MaxHealth);
+
+	if (HealthWidget)
+	{
+		HealthWidget->UpdateHealth(CurrentHealth, MaxHealth);
+	}
+
+	const float ActualDamage = PreviousHealth - CurrentHealth;
+
+	if (CurrentHealth <= 0.0f)
+	{
+		APlayerController* PlayerController = Cast<APlayerController>(GetController());
+
+		UKismetSystemLibrary::QuitGame(this, PlayerController, EQuitPreference::Quit, false);
+
+
+	}
+
+	return ActualDamage;
+}
+
+float AANye_HorrorFPSCharacter::Heal(float Amount)
+{
+	if (Amount <= 0.0f || CurrentHealth <= 0.0f || CurrentHealth >= MaxHealth)
+	{
+		return 0.0f;
+	}
+
+	const float PreviousHealth = CurrentHealth;
+
+	CurrentHealth = FMath::Clamp(CurrentHealth + Amount, 0.0f, MaxHealth);
+
+	if (IsValid(HealthWidget.Get()))
+	{
+		HealthWidget->UpdateHealth(CurrentHealth, MaxHealth);
+	}
+
+	return CurrentHealth - PreviousHealth;
+
 }
 
 //////////////////////////////////////////////////////////////////////////// Input
-
 void AANye_HorrorFPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {	
 	// Set up action bindings

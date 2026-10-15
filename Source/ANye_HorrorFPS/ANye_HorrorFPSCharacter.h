@@ -16,6 +16,8 @@ struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
+class UHealthWidget;
+
 UCLASS(config=Game)
 class AANye_HorrorFPSCharacter : public ACharacter
 {
@@ -40,8 +42,28 @@ class AANye_HorrorFPSCharacter : public ACharacter
 public:
 	AANye_HorrorFPSCharacter();
 
+	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	float Heal(float Amount);
+
 protected:
-	virtual void BeginPlay();
+	virtual void BeginPlay() override;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Health", meta = (ClampMin = "1.0"))
+	float MaxHealth = 100.0f;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Health")
+	float CurrentHealth = 100.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UHealthWidget> HealthWidgetClass;
+
+private:
+	UPROPERTY(Transient)
+	TObjectPtr<UHealthWidget> HealthWidget;
+
+
 
 public:
 		
@@ -53,6 +75,8 @@ public:
 	/** Look Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* LookAction;
+
+	
 
 protected:
 	/** Called for movement input */

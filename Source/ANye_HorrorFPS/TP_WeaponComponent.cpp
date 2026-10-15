@@ -14,7 +14,10 @@
 #include "Engine/World.h"
 #include "PerlinProcTerrain.h"
 #include "PerlinRockDeform.h"
+#include "TimerManager.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 #include "CollisionQueryParams.h"
+#include "GameFramework/Pawn.h"
 
 // Sets default values for this component's properties
 UTP_WeaponComponent::UTP_WeaponComponent()
@@ -65,31 +68,72 @@ void UTP_WeaponComponent::Fire()
 
 	TraceParams.bTraceComplex = true;
 
-	//**Alter terrain at the first blocking hit, if it is terrain and Perlin Rock Deform
-	if (World->LineTraceSingleByChannel(Hit, ViewLocation, TraceEnd, ECC_Visibility, TraceParams))
-	{
-		APerlinProcTerrain* Terrain = Cast<APerlinProcTerrain>(Hit.GetActor());
+	//**
+	const bool bTraceHit = World->LineTraceSingleByChannel(Hit, ViewLocation, TraceEnd, ECC_Visibility, TraceParams);
 
-		if (Terrain != nullptr)
+	if (bTraceHit)
+	{
+		if (APerlinProcTerrain* Terrain = Cast<APerlinProcTerrain>(Hit.GetActor()))
 		{
 			Terrain->AlterMesh(Hit.ImpactPoint);
 		}
-
-		if (APerlinRockDeform* Rock = Cast<APerlinRockDeform>(Hit.GetActor()))
-		{
-			Rock->HitRock(Hit.ImpactPoint, Hit.ImpactNormal, 25.0f);
-		}
 	}
 
+
 	//Spawn the projectile.
-	if (ProjectileClass != nullptr && GetOwner() != nullptr)
+	if (ProjectileClass != nullptr)
 	{
-		const FVector SpawnLocation = GetOwner()->GetActorLocation() + ViewRotation.RotateVector(MuzzleOffset);
+		const FVector SpawnLocation = Character->GetActorLocation() + ViewRotation.RotateVector(MuzzleOffset);
+
+		const FVector AimPoint = bTraceHit ? Hit.ImpactPoint : TraceEnd;
+		const FRotator ProjectileRotation = (AimPoint - SpawnLocation).Rotation();
 
 		FActorSpawnParameters ActorSpawnParams;
+		ActorSpawnParams.Owner = Character;
+		ActorSpawnParams.Instigator = Character;
 		ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+		
 
-		World->SpawnActor<AANye_HorrorFPSProjectile>(ProjectileClass, SpawnLocation, ViewRotation, ActorSpawnParams);
+		AANye_HorrorFPSProjectile* Projectile = World->SpawnActor<AANye_HorrorFPSProjectile>(ProjectileClass, SpawnLocation, ProjectileRotation, ActorSpawnParams);
+
+		if (Projectile && bTraceHit)
+		{
+			APerlinRockDeform* Rock = Cast<APerlinRockDeform>(Hit.GetActor());
+			if (Rock)
+			{
+				const UProjectileMovementComponent* Movement = Projectile->FindComponentByClass<UProjectileMovementComponent>();
+				const float ProjectileSpeed = Movement ? Movement->Velocity.Size() : 0.0f;
+
+				if (ProjectileSpeed > KINDA_SMALL_NUMBER)
+				{
+					const float TravelDistance = FVector::Distance(Projectile->GetActorLocation(), Hit.ImpactPoint);
+					const float TravelTime = TravelDistance / ProjectileSpeed;
+
+					//**
+					const TWeakObjectPtr<APerlinRockDeform> WeakRock(Rock);
+					const FVector ImpactPoint = Hit.ImpactPoint;
+					const FVector ImpactNormal = Hit.ImpactNormal;
+
+					FTimerDelegate DelayedHit;
+					DelayedHit.BindLambda([WeakRock, ImpactPoint, ImpactNormal]()
+						{
+							if (APerlinRockDeform* TargetRock = WeakRock.Get())
+							{
+								TargetRock->HitRock(ImpactPoint, ImpactNormal, 25.0f);
+							}
+						});
+
+					//**
+					FTimerHandle ShotTimer;
+					World->GetTimerManager().SetTimer(ShotTimer, DelayedHit, FMath::Max(TravelTime, 0.001f), false);
+				}
+
+				else
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Rock hit not scheduled: projectile needs a moving ProjectileMovementComponent"));
+				}
+			}
+		}
 	}
 
 	//Play firing sound.
