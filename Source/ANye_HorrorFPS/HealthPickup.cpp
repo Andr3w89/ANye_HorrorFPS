@@ -15,8 +15,10 @@ AHealthPickup::AHealthPickup()
 	// Root Collision detects the player.
 	RootCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("RootCollision"));
 
+	//** Set the collision box as the root component. 
 	SetRootComponent(RootCollision);
 
+	//**Set the box size and detect pawn overlaps without affecting navigation. 
 	RootCollision->InitBoxExtent(FVector(50.0f));
 	RootCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	RootCollision->SetCollisionObjectType(ECC_WorldDynamic);
@@ -25,18 +27,22 @@ AHealthPickup::AHealthPickup()
 	RootCollision->SetGenerateOverlapEvents(true);
 	RootCollision->SetCanEverAffectNavigation(false);
 
+	//**Call onpickupoverlap when something overlpas the box. 
 	RootCollision->OnComponentBeginOverlap.AddDynamic(this, &AHealthPickup::OnPickupOverlap);
 
 	//Both Meshes attach to the root collision
 	BoxMeshOne = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BoxMeshOne"));
 
+	//**Attach the first mesh and disable its collision, overlaps, and navigation effects. 
 	BoxMeshOne->SetupAttachment(RootCollision);
 	BoxMeshOne->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	BoxMeshOne->SetGenerateOverlapEvents(false);
 	BoxMeshOne->SetCanEverAffectNavigation(false);
 
+	//**Create the second mesh component
 	BoxMeshTwo = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BoxMeshTwo"));
 
+	//**Attach the second mesh and disable its collision, overlaps, and navigation effects. 
 	BoxMeshTwo->SetupAttachment(RootCollision);
 	BoxMeshTwo->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	BoxMeshTwo->SetGenerateOverlapEvents(false);
@@ -46,6 +52,7 @@ AHealthPickup::AHealthPickup()
 
 void AHealthPickup::OnPickupOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	//**Stop if the pickup has already been used. 
 	if (bConsumed)
 	{
 		return;
@@ -59,8 +66,10 @@ void AHealthPickup::OnPickupOverlap(UPrimitiveComponent* OverlappedComponent, AA
 		return;
 	}
 
+	//**Try to restore 15 health and store the amount restored. 
 	const float RestoredHealth = Player->Heal(15.0f);
 
+	//** Mark the pickup as used and remove it if health was restored. 
 	if (RestoredHealth > 0.0f)
 	{
 		bConsumed = true;

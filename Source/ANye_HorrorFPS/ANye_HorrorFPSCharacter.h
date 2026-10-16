@@ -42,24 +42,30 @@ class AANye_HorrorFPSCharacter : public ACharacter
 public:
 	AANye_HorrorFPSCharacter();
 
+	//** Declare the function that handles incoming damage. 
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
+	//** Declare the healing function so it can also be called from blueprints. 
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	float Heal(float Amount);
 
 protected:
 	virtual void BeginPlay() override;
 
+	//** Set the player's max health. 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Health", meta = (ClampMin = "1.0"))
 	float MaxHealth = 100.0f;
 
+	//** Store the player's current health. 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Health")
 	float CurrentHealth = 100.0f;
 
+	//** Set the widget class used to display the player's health. 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UHealthWidget> HealthWidgetClass;
 
 private:
+	//** Store the health widget created during the gameplay. 
 	UPROPERTY(Transient)
 	TObjectPtr<UHealthWidget> HealthWidget;
 

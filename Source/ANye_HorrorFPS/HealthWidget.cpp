@@ -6,6 +6,7 @@
 
 void UHealthWidget::UpdateHealth(float CurrentHealth, float MaxHealth)
 {
+	//**If the health bar exists, update its fill based on the players health. 
 	if (HealthBar)
 	{
 		const float HealthPercent = MaxHealth > 0.0f ? CurrentHealth / MaxHealth : 0.0f;

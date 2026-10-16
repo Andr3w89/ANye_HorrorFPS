@@ -17,9 +17,11 @@ AVertKeyDoor::AVertKeyDoor()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	//**Create aand set the root component.
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
 
+	//**Create and attach the movable door mesh with collision
 	DoorMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("DoorMesh"));
 	DoorMesh->SetupAttachment(SceneRoot);
 	DoorMesh->SetMobility(EComponentMobility::Movable);
@@ -32,6 +34,7 @@ void AVertKeyDoor::BeginPlay()
 {
 	Super::BeginPlay();
 
+	//**Save the door's closed positions. 
 	ClosedRelativeLocation = DoorMesh->GetRelativeLocation();
 	ClosedWorldLocation = DoorMesh->GetComponentLocation();
 
@@ -39,10 +42,13 @@ void AVertKeyDoor::BeginPlay()
 	// This keeps the door moving vertically even if the acotr is rotated. 
 	const FVector LocalOffset = SceneRoot->GetComponentTransform().InverseTransformVector(FVector(0.0f, 0.0f, OpenHeight));
 
+	//** Calculate the door's open position
 	OpenRelativeLocation = ClosedRelativeLocation + LocalOffset;
 
+	//** Gets the player controller
 	APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
 
+	//** Enables input and bind the E key to TryOpen
 	if (PC)
 	{
 		EnableInput(PC);
@@ -63,15 +69,19 @@ void AVertKeyDoor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	//**Skip movement if the door is not opening
 	if (!bOpening)
 	{
 		return;
 	}
 
+	//**Calculate the next position using the opening speed
 	const FVector NewLocation = FMath::VInterpConstantTo(DoorMesh->GetRelativeLocation(), OpenRelativeLocation, DeltaTime, OpenSpeed);
 
+	//**Move the door to the new position.
 	DoorMesh->SetRelativeLocation(NewLocation);
 
+	//**Stop movement and mark the door as opened when it reaches the target.
 	if (NewLocation.Equals(OpenRelativeLocation, 0.1f))
 	{
 		DoorMesh->SetRelativeLocation(OpenRelativeLocation);
@@ -81,6 +91,7 @@ void AVertKeyDoor::Tick(float DeltaTime)
 
 }
 
+//**Try to open the door if player is within range and has the correct key. 
 void AVertKeyDoor::TryOpen()
 {
 
@@ -89,6 +100,7 @@ void AVertKeyDoor::TryOpen()
 		return;
 	}
 
+	//**grabs the players pawn. 
 	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(this, 0);
 
 	if (!PlayerPawn)
@@ -96,6 +108,7 @@ void AVertKeyDoor::TryOpen()
 		return;
 	}
 
+	//**Calculate the squared distance between the player and the closed door.
 	const float DistanceSquared = FVector::DistSquared(PlayerPawn->GetActorLocation(), ClosedWorldLocation);
 
 	if (DistanceSquared > FMath::Square(InteractionDistance))
@@ -103,8 +116,10 @@ void AVertKeyDoor::TryOpen()
 		return;
 	}
 
+	//**Create the inventory tag for the required key
 	const FName InventoryTag(*FString::Printf(TEXT("Key.%s"), *RequiredKeyID.ToString()));
 
+	//**Checks to see if player has correct key, displays message if not. 
 	if (!PlayerPawn->ActorHasTag(InventoryTag))
 	{
 		if (GEngine)

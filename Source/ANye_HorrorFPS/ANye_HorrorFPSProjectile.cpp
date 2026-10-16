@@ -59,6 +59,7 @@ void AANye_HorrorFPSProjectile::BeginPlay()
 	dmiMat->SetVectorParameterValue("projColor", randColor);
 }
 
+//** Handle projectile hits, enemy damage, and impact effects. 
 void AANye_HorrorFPSProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 
@@ -67,14 +68,20 @@ void AANye_HorrorFPSProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* Othe
 		return;
 	}
 
+	//** Start with the enemy hit flag set to false. 
+	bool bHitEnemy = false;
+
 	UE_LOG(LogTemp, Warning, TEXT("Player projectile hit: %s"), *GetNameSafe(OtherActor));
 
+	//**If an enemy was hit, mark the hit, disable collision, and deal 20 damage. 
 	if (AEnemyCharacter* Enemy = Cast<AEnemyCharacter>(OtherActor))
 	{
+
+		bHitEnemy = true;
+		CollisionComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
 		UGameplayStatics::ApplyDamage(Enemy, 20.0f, GetInstigatorController(), this, UDamageType::StaticClass());
 
-		Destroy();
-		return;
 	}
 
 	// Only add impulse and destroy projectile if we hit a physics
@@ -85,33 +92,48 @@ void AANye_HorrorFPSProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* Othe
 		Destroy();
 	}
 
+	//**Create impact effects and remove the projectile if the hit actor exists. 
 	if (OtherActor != nullptr)
 	{
-		//** Check that a Niagara system asset is assigned before creating the particle effect. 
+		//**Disable further projectile collisions. 
+		CollisionComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		//**Spawn the impact particles and apply the projectiles random color. 
 		if (colorP)
 		{
-			//**Spawn the Niagara effect attached to HitComp
-			UNiagaraComponent* particleComp = UNiagaraFunctionLibrary::SpawnSystemAttached(colorP, HitComp, NAME_None, FVector(-20.0f, 0.0f, 0.0f), FRotator(0.0f), EAttachLocation::KeepRelativeOffset, true);
-			//**Pass the projectiles random color to the Niagara effect's RandColor param.
-			particleComp->SetNiagaraVariableLinearColor(FString("RandColor"), randColor);
-			//Remove the projectiles mesh component after spawning impact effect.
-			ballMesh->DestroyComponent();
-			//**Switch the collision sphere to no collision to prevent more interactions.
-			CollisionComp->BodyInstance.SetCollisionProfileName("NoCollision");
+			UNiagaraComponent* ParticleComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), colorP, Hit.ImpactPoint, Hit.ImpactNormal.Rotation());
+
+			if (ParticleComp)
+			{
+				ParticleComp->SetVariableLinearColor(FName(TEXT("RandColor")), randColor);
+			}
 		}
 
-		//Generate random floating point value for the decal material's frame param. 
-		float frameNum = UKismetMathLibrary::RandomFloatInRange(0.0f, 3.0f);
-		
-		//Spaw a decal with a uniform random size. 
-		auto Decal = UGameplayStatics::SpawnDecalAtLocation(GetWorld(), baseMat, FVector(UKismetMathLibrary::RandomFloatInRange(20.0f, 40.0f)), Hit.Location, Hit.Normal.Rotation(), 0.0f);
-		//Create a dynamic material instance
-		auto MatInstance = Decal->CreateDynamicMaterialInstance();
-		//Give the decal the same random color as the projectile.
-		MatInstance->SetVectorParameterValue("Color", randColor);
-		//Pass the random frame value to the decal to control the frame number.
-		MatInstance->SetScalarParameterValue("Frame", frameNum);
+		//** Spawn an impact decal with a random size and frame value. 
+		if (baseMat)
+		{
+			const float FrameNum = UKismetMathLibrary::RandomFloatInRange(0.0f, 3.0f);
 
-		
+			const float DecalSize = UKismetMathLibrary::RandomFloatInRange(20.0f, 40.0f);
+
+			UDecalComponent* Decal = UGameplayStatics::SpawnDecalAtLocation(GetWorld(), baseMat, FVector(DecalSize), Hit.ImpactPoint, Hit.ImpactNormal.Rotation(), 0.0f);
+
+			//** Create a dynamic material for the decal if it spawned. 
+			if (Decal)
+			{
+				UMaterialInstanceDynamic* MatInstance = Decal->CreateDynamicMaterialInstance();
+
+				//**Apply the random color and frame value to the decal material. 
+				if (MatInstance)
+				{
+					MatInstance->SetVectorParameterValue(TEXT("Color"), randColor);
+
+					MatInstance->SetScalarParameterValue(TEXT("Frame"), FrameNum);
+				}
+			}
+
+		}
+
+		Destroy();
 	}
 }

@@ -31,19 +31,22 @@ public:
 	// Sets default values for this actor's properties
 	APerlinRockDeform();
 
-	//**
+	//** Declare the function that rebuilds the rock when constructed. 
 	virtual void OnConstruction(const FTransform& Transform) override;
 
 	//**Pass the world-space impact position and outwaard surface normal.
 	UFUNCTION(BlueprintCallable, Category = "Rock")
 	void HitRock(FVector ImpactPoint, FVector ImpactNormal, float DamageAmount);
 
+	//** Set the static mesh used to build the rock. 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rock")
 	UStaticMesh* RockMesh = nullptr;
 
+	//** Set the rocks max health. 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rock|Damage", meta = (ClampMin = "1.0"))
 	float MaxHealth = 100.0f;
 
+	//**Store the rocks current health. 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Rock|Damage")
 	float CurrentHealth = 100.0f;
 
@@ -51,6 +54,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rock|Deformation", meta = (ClampMin = "0.1"))
 	float DentRadius = 20.0f;
 
+	//**Set how deeply each hit dents the rock. 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rock|Deformation", meta = (ClampMin = "0.0"))
 	float DentDepth = 3.0f;
 
@@ -64,14 +68,17 @@ protected:
 	virtual void BeginPlay() override;
 
 public:	
-	
+	//**Stores the procedural mesh component used for deformation. 
 	UPROPERTY(VisibleAnywhere, Category = "Rock")
 	UProceduralMeshComponent* ProcMesh = nullptr;
 
+	//**Store the geometry data for each rock section. 
 	TArray<FRockSectionData> RockSections;
 
+	//** Declare the function that builds the procedural rock mesh. 
 	bool BuildRockMesh();
 
+	//** Declare the function that dents the rock at an impact point. 
 	void ApplyDent(const FVector& ImpactPoint, const FVector& ImpactNormal);
 
 };

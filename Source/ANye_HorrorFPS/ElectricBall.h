@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "ElectricBall.generated.h"
 
+//**Declares the component classes used by the ball. 
 class USphereComponent;
 class UStaticMeshComponent;
 class UProjectileMovementComponent;
@@ -24,18 +25,21 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	//**Store the sphere that handles collision
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<USphereComponent> CollisionSphere;
-
+	//**Store the balls mesh component
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> BallMesh;
-
+	//**Store the compoinent that moves the ball. 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
 
 private:
+	//**Track if the ball has already hit something
 	bool bHasHit = false;
 
+	//**Declare the function called when the ball hits something. 
 	UFUNCTION()
 	void OnBallHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpuse, const FHitResult& Hit);
 

@@ -23,19 +23,24 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	//Store the sphere that detects pickup overlaps. 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Key")
 	TObjectPtr<USphereComponent> PickupSphere;
 
+	//**Store the key's mesh component. 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Key")
 	TObjectPtr<UStaticMeshComponent> KeyMesh;
 
+	//** Set the key ID used to unlock the matching door., 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Key")
 	FName KeyID = TEXT("Door1");
 
 
 private: 
+	//**Track whether the key has already been collected. 
 	bool bCollected = false;
 
+	//** Declare the function called when something overlaps the pickup. 
 	UFUNCTION()
 	void OnPickupOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 

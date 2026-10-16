@@ -68,9 +68,10 @@ void UTP_WeaponComponent::Fire()
 
 	TraceParams.bTraceComplex = true;
 
-	//**
+	//**Trace the player's aim and store whether something was hit. 
 	const bool bTraceHit = World->LineTraceSingleByChannel(Hit, ViewLocation, TraceEnd, ECC_Visibility, TraceParams);
 
+	//** Change the terrain mesh if the trace hits terrain. 
 	if (bTraceHit)
 	{
 		if (APerlinProcTerrain* Terrain = Cast<APerlinProcTerrain>(Hit.GetActor()))
@@ -83,51 +84,59 @@ void UTP_WeaponComponent::Fire()
 	//Spawn the projectile.
 	if (ProjectileClass != nullptr)
 	{
+		//** Calculate the projectiles spawn location using the muzzle offset. 
 		const FVector SpawnLocation = Character->GetActorLocation() + ViewRotation.RotateVector(MuzzleOffset);
 
+		//**Aim the projectile toward the hit point or the end of the trace. 
 		const FVector AimPoint = bTraceHit ? Hit.ImpactPoint : TraceEnd;
 		const FRotator ProjectileRotation = (AimPoint - SpawnLocation).Rotation();
 
+		//** Set the shooter and adjust the spawn location if blocked. 
 		FActorSpawnParameters ActorSpawnParams;
 		ActorSpawnParams.Owner = Character;
 		ActorSpawnParams.Instigator = Character;
 		ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
 		
-
+		//**Spawn the projectile at the calculaated location and rotation. 
 		AANye_HorrorFPSProjectile* Projectile = World->SpawnActor<AANye_HorrorFPSProjectile>(ProjectileClass, SpawnLocation, ProjectileRotation, ActorSpawnParams);
 
+		//** check that the projectile spawned and the trace hit something. 
 		if (Projectile && bTraceHit)
 		{
+			//**Check if the trace hit a rock. 
 			APerlinRockDeform* Rock = Cast<APerlinRockDeform>(Hit.GetActor());
 			if (Rock)
 			{
 				const UProjectileMovementComponent* Movement = Projectile->FindComponentByClass<UProjectileMovementComponent>();
 				const float ProjectileSpeed = Movement ? Movement->Velocity.Size() : 0.0f;
 
+				//** Estimate the travel time if the projectile is moving. 
 				if (ProjectileSpeed > KINDA_SMALL_NUMBER)
 				{
 					const float TravelDistance = FVector::Distance(Projectile->GetActorLocation(), Hit.ImpactPoint);
 					const float TravelTime = TravelDistance / ProjectileSpeed;
 
-					//**
+					//**Save a weak rock reference and the impact details for the delayed hit. 
 					const TWeakObjectPtr<APerlinRockDeform> WeakRock(Rock);
 					const FVector ImpactPoint = Hit.ImpactPoint;
 					const FVector ImpactNormal = Hit.ImpactNormal;
 
+					//**Create the action to run after the travel delay. 
 					FTimerDelegate DelayedHit;
 					DelayedHit.BindLambda([WeakRock, ImpactPoint, ImpactNormal]()
 						{
+							//**Deal damage and dent the rock if it still exists. 
 							if (APerlinRockDeform* TargetRock = WeakRock.Get())
 							{
 								TargetRock->HitRock(ImpactPoint, ImpactNormal, 25.0f);
 							}
 						});
 
-					//**
+					//**Run the delayed hit once after the estimated travel time. 
 					FTimerHandle ShotTimer;
 					World->GetTimerManager().SetTimer(ShotTimer, DelayedHit, FMath::Max(TravelTime, 0.001f), false);
 				}
-
+				//** log a warning if the projectile is not moving. 
 				else
 				{
 					UE_LOG(LogTemp, Warning, TEXT("Rock hit not scheduled: projectile needs a moving ProjectileMovementComponent"));

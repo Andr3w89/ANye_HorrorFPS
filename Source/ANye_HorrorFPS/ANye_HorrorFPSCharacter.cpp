@@ -46,14 +46,17 @@ void AANye_HorrorFPSCharacter::BeginPlay()
 	// Call the base class  
 	Super::BeginPlay();
 
+	//**Starts the player with full health. 
 	CurrentHealth = MaxHealth;
 
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
 
+	//**Create the health widget for the local player if a widget class is set. 
 	if (PlayerController && PlayerController->IsLocalController() && HealthWidgetClass)
 	{
 		HealthWidget = CreateWidget<UHealthWidget>(PlayerController, HealthWidgetClass);
 
+		//** Display the health widget and update its health bar if created. 
 		if (HealthWidget)
 		{
 			HealthWidget->AddToViewport();
@@ -65,23 +68,29 @@ void AANye_HorrorFPSCharacter::BeginPlay()
 
 float AANye_HorrorFPSCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+	//** Ignore damage if the amoun is zero or less, or the player is dead. 
 	if (DamageAmount <= 0.0 || CurrentHealth <= 0.0f)
 	{
 		return 0.0f;
 	}
 
+	//**Let the parent class process the damage. 
 	const float AcceptedDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
+	//**Save the previous health and subtract damage within the health limits. 
 	const float PreviousHealth = CurrentHealth;
 	CurrentHealth = FMath::Clamp(CurrentHealth - FMath::Max(AcceptedDamage, 0.0f), 0.0f, MaxHealth);
 
+	//**Update health bar if the widget exists. 
 	if (HealthWidget)
 	{
 		HealthWidget->UpdateHealth(CurrentHealth, MaxHealth);
 	}
 
+	//**Calculate the amount of health lost. 
 	const float ActualDamage = PreviousHealth - CurrentHealth;
 
+	//**Quit game when the player's health reaches zero. 
 	if (CurrentHealth <= 0.0f)
 	{
 		APlayerController* PlayerController = Cast<APlayerController>(GetController());
@@ -91,25 +100,32 @@ float AANye_HorrorFPSCharacter::TakeDamage(float DamageAmount, FDamageEvent cons
 
 	}
 
+	//** Return the amount of health lost. 
 	return ActualDamage;
 }
 
+//** Restore health and return the amount restored. 
 float AANye_HorrorFPSCharacter::Heal(float Amount)
 {
+	//** Skip healing if the amount is invalid IE dead or health full.
 	if (Amount <= 0.0f || CurrentHealth <= 0.0f || CurrentHealth >= MaxHealth)
 	{
 		return 0.0f;
 	}
 
+	//** Save the health before healing. 
 	const float PreviousHealth = CurrentHealth;
 
+	//** Add health without exceed the max. 
 	CurrentHealth = FMath::Clamp(CurrentHealth + Amount, 0.0f, MaxHealth);
 
+	//**Update health bar if the widget is valid. 
 	if (IsValid(HealthWidget.Get()))
 	{
 		HealthWidget->UpdateHealth(CurrentHealth, MaxHealth);
 	}
 
+	//** Return the amount of health restored. 
 	return CurrentHealth - PreviousHealth;
 
 }
